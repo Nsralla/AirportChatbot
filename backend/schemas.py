@@ -27,5 +27,5 @@ class userResponse(BaseModel):
     name: str
     email: str
     
-    class Cofig:
+    class Config:
         from_attributes  = True
