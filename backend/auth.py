@@ -20,3 +20,5 @@ def verify_token(token: str):
         return payload
     except JWTError:
         return None
+
+#  protect private routes so only logged-in users can access them.

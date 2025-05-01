@@ -21,11 +21,19 @@ class userCreate(BaseModel):
     name: str
     email: str
     password: str  # hashed password
+    is_admin: bool =  False
 
 class userResponse(BaseModel):
     id: int
     name: str
     email: str
+    is_admin: bool
     
     class Config:
         from_attributes  = True
+
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str

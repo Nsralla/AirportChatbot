@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from .database import Base
 
 #  we have two tables, one for user and one for interaction
@@ -19,4 +19,5 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)  # hashed password
+    is_admin = Column(Boolean, default=False)  # 0 for user, 1 for admin
     
