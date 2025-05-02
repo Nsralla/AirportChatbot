@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import styles from './login.module.css';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -16,10 +17,14 @@ export default function Login() {
         }
 
         try {
+            const params = new URLSearchParams();
+            params.append("username", email);  // 'username' is required by OAuth2PasswordRequestForm
+            params.append("password", password);
         
-            const response = await axios.post('http://127.0.0.1:8000/login',{
-                email:email,
-                password:password
+            const response = await axios.post('http://127.0.0.1:8000/login',params,{
+                headers:{
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
             });
 
             const token = response.data.access_token;
@@ -58,6 +63,9 @@ export default function Login() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                     />
+                </div>
+                <div>
+                    <p>Don't have an account? <Link to="/signin">Sign In</Link></p>
                 </div>
                 {error && <p style={{ color: 'red' }}>{error}</p>}
                 <button type="submit">LOGIN</button>

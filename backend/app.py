@@ -13,6 +13,7 @@ from backend.auth import create_access_token, verify_token
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from fastapi import status
 from passlib.context import CryptContext
+from fastapi.middleware.cors import CORSMiddleware
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 auth_router = APIRouter()
@@ -33,7 +34,13 @@ def getDB():
         
 app = FastAPI()
 
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # or your React dev URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Dependency to extract user from token
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(getDB)):
@@ -70,7 +77,7 @@ def createUser( user: userCreate, db: Session = Depends(getDB)):
 def getUsers(current_user: User = Depends(get_current_user) ,db: Session = Depends(getDB)):
     #  check if user is admin
     print(current_user.is_admin)
-    if current_user.is_admin == 0:
+    if not current_user.is_admin :
         raise HTTPException(status_code=403, detail="Not authorized")
     allUsers = db.query(User).all()
     return allUsers
@@ -80,6 +87,8 @@ def getUsers(current_user: User = Depends(get_current_user) ,db: Session = Depen
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(getDB)):
     user = db.query(User).filter(User.email == form_data.username).first()
+    print(user.email, user.name, user.password)
+    print(form_data.username, form_data.password)
     if not user or not pwd_context.verify(form_data.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
