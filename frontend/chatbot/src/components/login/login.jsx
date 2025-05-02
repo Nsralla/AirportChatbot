@@ -2,12 +2,15 @@ import { useState } from 'react';
 import styles from './login.module.css';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-
+import { BASE_URL } from '../../api.js';
+import { useNavigate } from 'react-router-dom';
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
+    const navigate = useNavigate();
+    
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -21,17 +24,20 @@ export default function Login() {
             params.append("username", email);  // 'username' is required by OAuth2PasswordRequestForm
             params.append("password", password);
         
-            const response = await axios.post('http://127.0.0.1:8000/login',params,{
+            const response = await axios.post(`${BASE_URL}/login`,params,{
                 headers:{
                     'Content-Type': 'application/x-www-form-urlencoded',
                 }
             });
-
-            const token = response.data.access_token;
-            localStorage.setItem("token", token);
-
-            // OPTIONAL: Redirect or update app state here
-            console.log("Login successful");
+            if(response.status === 200){
+                const token = response.data.access_token;
+                localStorage.setItem("token", token);
+    
+                // OPTIONAL: Redirect or update app state here
+                console.log("Login successful");
+                navigate('/home'); // Redirect to home page after successful login
+            }
+           
         } catch (err) {
             setError("Invalid credentials");
             console.error(err);

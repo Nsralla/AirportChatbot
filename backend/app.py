@@ -74,7 +74,7 @@ def createUser( user: userCreate, db: Session = Depends(getDB)):
     
 # endpoint to get all users
 @app.get("/users/", response_model= List[userResponse])
-def getUsers(current_user: User = Depends(get_current_user) ,db: Session = Depends(getDB)):
+def getUsers(current_user: userResponse = Depends(get_current_user) ,db: Session = Depends(getDB)):
     if not current_user.is_admin :
         raise HTTPException(status_code=403, detail="Not authorized")
     allUsers = db.query(User).all()
@@ -82,7 +82,7 @@ def getUsers(current_user: User = Depends(get_current_user) ,db: Session = Depen
 
 
 
-@app.post("/login")
+@app.post("/login", status_code=200)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(getDB)):
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not pwd_context.verify(form_data.password, user.password):
@@ -91,6 +91,26 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
 
+
+# sigin endpoint
+@app.post("/sigin",response_model=userResponse, status_code=201)
+def sigin(new_user:userCreate, db: Session = Depends(getDB)):
+    # validate if email already exists
+    existingUserWithSameEmail = db.query(User).filter(User.email == new_user.email).first()
+    if existingUserWithSameEmail:
+        raise HTTPException(status_code=400, detail={"message": "Account with this email already exists"})
+    # hash the password
+    hashedPassword = hash_password(new_user.password)
+    db_user = User(
+        name = new_user.name,
+        email = new_user.email,
+        password = hashedPassword,
+        is_admin = new_user.is_admin
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 
 # Example protected route
