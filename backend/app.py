@@ -75,8 +75,6 @@ def createUser( user: userCreate, db: Session = Depends(getDB)):
 # endpoint to get all users
 @app.get("/users/", response_model= List[userResponse])
 def getUsers(current_user: User = Depends(get_current_user) ,db: Session = Depends(getDB)):
-    #  check if user is admin
-    print(current_user.is_admin)
     if not current_user.is_admin :
         raise HTTPException(status_code=403, detail="Not authorized")
     allUsers = db.query(User).all()
@@ -87,8 +85,6 @@ def getUsers(current_user: User = Depends(get_current_user) ,db: Session = Depen
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(getDB)):
     user = db.query(User).filter(User.email == form_data.username).first()
-    print(user.email, user.name, user.password)
-    print(form_data.username, form_data.password)
     if not user or not pwd_context.verify(form_data.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
