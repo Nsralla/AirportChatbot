@@ -13,11 +13,50 @@ export default function HomePage() {
   const [messages, setMessages] = useState([
     { sender: 'Bot', text: 'Hello! How can I help you today?' }
   ]);
-  const [interaction, setInteraction] = useState('');
   const [input, setInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleSend = () => {
+
+
+
+
+//function to get all old interactions  
+useEffect(()=>{
+  const fetchAllInteractions = async ()=>{
+    try{
+      const token = localStorage.getItem("token");
+      if(!token || isTokenExpired(token)){
+          localStorage.removeItem("token"); // Remove token if expired
+          navigate('/'); // Redirect to login page
+          return;
+      }
+      const response = await axios.get(`${BASE_URL}/interactions`,{
+        headers:{
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if(response.data && response.data.length > 0){
+        const oldMessages = response.data.flatMap(interaction => ([
+          { sender: 'User', text: interaction.userMessage },
+          { sender: 'Bot', text: interaction.botMessage }
+        ]));
+        setMessages(prev => [...prev, ...oldMessages]);
+      }
+      
+  }catch(error){
+    console.error("Error fetching interactions:", error);
+    if(error.response && error.response.status === 401){
+      localStorage.removeItem("token"); // Remove token if unauthorized
+      navigate('/');
+    }
+  }
+  };
+  fetchAllInteractions();
+},[navigate]);
+
+
+// Function to handle sending messages
+const handleSend = () => {
     if (!input.trim()) return;
   
     const userMessage = input;
@@ -51,9 +90,8 @@ export default function HomePage() {
   
     sendInteraction();
   };
-  
-
-  useEffect(() => {
+// function to get user email
+useEffect(() => {
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -91,12 +129,12 @@ export default function HomePage() {
         <button className={styles.closeBtn} onClick={() => setSidebarOpen(false)}>&times;</button>
         <h2>User Info</h2>
         <p><strong>Email:</strong> {userEmail}</p>
-        <h3>Old Chats</h3>
+        {/* <h3>Old Chats</h3>
         <ul className={styles.chatList}>
           {messages.filter(m => m.sender === 'User').map((m, i) => (
             <li key={i}>{m.text}</li>
           ))}
-        </ul>
+        </ul> */}
       </div>
 
       {/* Overlay when sidebar is open */}
