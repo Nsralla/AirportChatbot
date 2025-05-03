@@ -3,7 +3,7 @@ import styles from './HomePage.module.css';
 import axios from 'axios';
 import { useEffect } from 'react';
 import { BASE_URL } from '../../api';
-import { useNavigate } from 'react-router-dom';
+import { UNSAFE_getPatchRoutesOnNavigationFunction, useNavigate } from 'react-router-dom';
 import { isTokenExpired } from '../../utils/auth';
 
 
@@ -13,19 +13,51 @@ export default function HomePage() {
   const [messages, setMessages] = useState([
     { sender: 'Bot', text: 'Hello! How can I help you today?' }
   ]);
+  const [interaction, setInteraction] = useState('');
   const [input, setInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSend = () => {
     if (!input.trim()) return;
-    setMessages(prev => [...prev, { sender: 'User ', text: input }]);
+  
+    const userMessage = input;
+
+  
+    setMessages(prev => [...prev, { sender: 'User', text: userMessage }]); // show user message immediately
     setInput('');
+  
+    const sendInteraction = async () => {
+      try {
+        const response = await axios.post(`${BASE_URL}/interactions`, {
+          userMessage,
+          botMessage: '', // initially empty; backend generates bot response
+          timestamp: new Date().toISOString()
+        }, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+          }
+        });
+  
+        const botMessage = response.data.botMessage;
+        setMessages(prev => [...prev, { sender: 'Bot', text: botMessage }]); // update with bot response
+      } catch (error) {
+        console.error("Error sending message:", error);
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem("token");
+          navigate('/');
+        }
+      }
+    };
+  
+    sendInteraction();
   };
+  
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem("token");
+       
         if(!token || isTokenExpired(token)){
           localStorage.removeItem("token"); // Remove token if expired
           navigate('/'); // Redirect to login page
@@ -48,7 +80,7 @@ export default function HomePage() {
     };
 
     fetchUserData();
-  }, []); // Empty dependency array means this runs once when the component mounts
+  }, [navigate]); // Empty dependency array means this runs once when the component mounts
 
 
   return (

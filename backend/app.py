@@ -117,3 +117,29 @@ def sigin(new_user:userCreate, db: Session = Depends(getDB)):
 @app.get("/me")
 def get_me(current_user: User = Depends(get_current_user)):
     return {"id": current_user.id, "name": current_user.name, "email": current_user.email, "is_admin": current_user.is_admin}
+
+# end point to reciev user message and return bot message
+@app.post("/interactions/",response_model=interactionResponse)
+def createInteraction(interaction: interactionCreate, db: Session = Depends(getDB), current_user:User = Depends(get_current_user)):
+    response = "Hi, nice to meet you!, I am still learning, please be patient with me."
+    db_interaction = Interaction(
+        userMessage = interaction.userMessage,
+        botMessage = response,
+        timestamp = datetime.now(),
+        userId = current_user.id
+    )
+    db.add(db_interaction)
+    db.commit()
+    db.refresh(db_interaction)
+    return db_interaction
+
+# end poiint to get all interactions for a user, check if user is admin or not
+@app.get("/interactions/", response_model=List[interactionResponse])
+def getInteractions(db: Session = Depends(getDB), current_user = Depends(get_current_user)):
+    if current_user.is_admin:
+        allInteractions = db.query(Interaction).all()
+        return allInteractions
+    else:
+        allInteractions = db.query(Interaction).filter(Interaction.userId == current_user.id).all()
+        return allInteractions
+        
