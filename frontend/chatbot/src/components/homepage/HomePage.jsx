@@ -1,20 +1,55 @@
 import React, { useState } from 'react';
 import styles from './HomePage.module.css';
+import axios from 'axios';
+import { useEffect } from 'react';
+import { BASE_URL } from '../../api';
+import { useNavigate } from 'react-router-dom';
+import { isTokenExpired } from '../../utils/auth';
+
 
 export default function HomePage() {
+  const [userEmail, setUserEmail] = useState('');
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([
     { sender: 'Bot', text: 'Hello! How can I help you today?' }
   ]);
   const [input, setInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const userEmail = 'user@example.com'; // Replace with actual logged-in user email
-
   const handleSend = () => {
     if (!input.trim()) return;
-    setMessages(prev => [...prev, { sender: 'User', text: input }]);
+    setMessages(prev => [...prev, { sender: 'User ', text: input }]);
     setInput('');
   };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if(!token || isTokenExpired(token)){
+          localStorage.removeItem("token"); // Remove token if expired
+          navigate('/'); // Redirect to login page
+          return;
+        }
+        const response = await axios.get(`${BASE_URL}/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setUserEmail(response.data.email); 
+        console.log("User data fetched successfully:", response.data.email);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        if(error.response && error.response.status === 401){
+          localStorage.removeItem("token"); // Remove token if unauthorized
+          navigate('/');
+        }
+      }
+    };
+
+    fetchUserData();
+  }, []); // Empty dependency array means this runs once when the component mounts
+
 
   return (
     <div className={`${styles.homeContainer} ${sidebarOpen ? styles.containerOpen : ''}`} id="homeContainer">
