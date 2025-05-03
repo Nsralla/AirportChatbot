@@ -14,6 +14,23 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from fastapi import status
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
+import os
+import openai
+from openai import OpenAI
+from dotenv import load_dotenv
+
+
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path)
+openai.api_key = os.getenv("OPENAI_API_KEY")
+if not openai.api_key:
+    raise RuntimeError("OPENAI_API_KEY is not set in the .env file")
+client = OpenAI(api_key=openai.api_key)
+
+res = client.models.list()
+print("//////////////////////////////////")
+print(res)
+print("//////////////////////////////////")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 auth_router = APIRouter()
@@ -118,21 +135,54 @@ def sigin(new_user:userCreate, db: Session = Depends(getDB)):
 def get_me(current_user: User = Depends(get_current_user)):
     return {"id": current_user.id, "name": current_user.name, "email": current_user.email, "is_admin": current_user.is_admin}
 
-# end point to reciev user message and return bot message
-@app.post("/interactions/",response_model=interactionResponse)
-def createInteraction(interaction: interactionCreate, db: Session = Depends(getDB), current_user:User = Depends(get_current_user)):
-    response = "Hi, nice to meet you!, I am still learning, please be patient with me."
+@app.post("/interactions/", response_model=interactionResponse)
+def createInteraction(
+    interaction: interactionCreate,
+    db: Session = Depends(getDB),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an airport assistant chatbot. You can only answer the following 5 FAQs:\n\n"
+                        "1. Which items are prohibited in carry-on luggage?\n"
+                        "2. How early should I arrive before my flight?\n"
+                        "3. Where is the lost-and-found located at the airport?\n"
+                        "4. How much luggage can I carry?\n"
+                        "5. Can I carry medicines in my hand luggage?\n\n"
+                        "If the user asks anything outside of these questions, politely reply:\n"
+                        "'I'm sorry, I can only help with common airport FAQs. Please contact airport staff or visit the official website for more info.'"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": interaction.userMessage
+                }
+            ],
+            temperature=0.6
+        )
+
+        bot_reply = response.choices[0].message.content.strip()
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="OPEN AI ERROR: " + str(e))
+
     db_interaction = Interaction(
-        userMessage = interaction.userMessage,
-        botMessage = response,
-        timestamp = datetime.now(),
-        userId = current_user.id
+        userMessage=interaction.userMessage,
+        botMessage=bot_reply,
+        timestamp=datetime.now(),
+        userId=current_user.id
     )
+
     db.add(db_interaction)
     db.commit()
     db.refresh(db_interaction)
-    return db_interaction
 
+    return db_interaction
 # end poiint to get all interactions for a user, check if user is admin or not
 @app.get("/interactions/", response_model=List[interactionResponse])
 def getInteractions(db: Session = Depends(getDB), current_user = Depends(get_current_user)):

@@ -22,3 +22,5 @@ api.js
 *.njsproj
 *.sln
 *.sw?
+frontend\chatbot\package-lock.json
+C:\Users\nsrha\OneDrive\Desktop\AirportChatbot\frontend\chatbot\package.json

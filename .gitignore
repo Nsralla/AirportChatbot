@@ -1,2 +1,7 @@
 .venv
 backend/.env
+package-lock.json
+package.json
+backend\__pycache__
+backend/__pycache__/
+./backend/__pycache__/
