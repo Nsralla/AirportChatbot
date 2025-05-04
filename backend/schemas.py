@@ -52,3 +52,8 @@ class MessageResponse(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+
+class MessageInput(BaseModel):
+    chat_id: int
+    user_message: str

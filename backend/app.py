@@ -6,7 +6,7 @@ from sqlalchemy.orm import  Session
 from datetime import datetime
 from backend.database import  engine, sessionLocal, Base
 from backend.models import User, Chat, Message
-from backend.schemas import ChatCreate, ChatResponse, MessageCreate, MessageResponse, UserResponse, UserCreate
+from backend.schemas import ChatCreate,MessageInput, ChatResponse, MessageCreate, MessageResponse, UserResponse, UserCreate
 from backend.security import hash_password, verify_password
 from . import models
 from backend.auth import create_access_token, verify_token
@@ -179,11 +179,13 @@ def create_new_chat(db: Session = Depends(getDB), current_user: User = Depends(g
 
 @app.post("/messages/", response_model=List[MessageResponse])
 def send_message_to_chat(
-    chat_id: int,
-    user_message: str,
+    message: MessageInput,
     db: Session = Depends(getDB),
     current_user = Depends(get_current_user)
 ):
+    chat_id = message.chat_id
+    user_message = message.user_message
+    # Validate user message is not empty
     # Validate chat exists and belongs to current user
     chat = db.query(Chat).filter(Chat.id == chat_id).first()
     if not chat:

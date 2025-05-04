@@ -12,6 +12,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const[chats, setChats] = useState([]);
 
   // Fetch user info
   useEffect(() => {
@@ -96,6 +97,30 @@ export default function ChatPage() {
     }
   };
 
+
+  // Fetch chats on load
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${BASE_URL}/chats/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setChats(res.data);
+      } catch (err) {
+        console.error("Failed to fetch chats:", err);
+        if(err.response && err.response.status === 401) {
+          // Redirect to login if unauthorized
+          navigate('/');
+        }
+      }
+    };
+
+    fetchChats();
+  }, [navigate]);
+
   return (
     <div className={`${styles.chatContainer} ${sidebarOpen ? styles.containerOpen : ''}`}>
       {/* Sidebar */}
@@ -103,6 +128,16 @@ export default function ChatPage() {
         <button className={styles.closeBtn} onClick={() => setSidebarOpen(false)}>&times;</button>
         <h2>User Info</h2>
         <p><strong>Email:</strong> {userEmail}</p>
+        <h2>Chats</h2>
+        <ul className={styles.chatList}>
+            {chats.map(chat => (
+                <li key={chat.id} className={styles.chatItem}>
+                <Link to={`/chat/${chat.id}`} className={styles.chatLink}>
+                Chat #{chat.id} - {new Date(chat.created_at).toLocaleString()}
+                </Link>
+                </li>
+            ))}
+        </ul>
       </div>
 
       {sidebarOpen && <div className={styles.overlay} onClick={() => setSidebarOpen(false)}></div>}

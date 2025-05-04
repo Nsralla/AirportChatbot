@@ -6,3 +6,4 @@ backend\__pycache__
 backend/__pycache__/
 ./backend/__pycache__/
 backend/chats.db
+.chats.db
