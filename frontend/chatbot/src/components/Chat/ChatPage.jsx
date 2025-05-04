@@ -14,6 +14,10 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const[chats, setChats] = useState([]);
 
+  function handleLogOut() {
+    localStorage.removeItem("token");
+    navigate('/');
+  }
   // Fetch user info
   useEffect(() => {
     const fetchUser = async () => {
@@ -145,7 +149,10 @@ export default function ChatPage() {
       {/* Header */}
       <header className={styles.header}>
         <button className={styles.burgerBtn} onClick={() => setSidebarOpen(true)}>&#9776;</button>
-        <h1 className={styles.title}><Link to="/home">ChatBot Pro</Link></h1>
+        <h1 className={styles.title}>
+            <Link to="/home">ChatBot Pro</Link>
+             <button onClick={(e)=>handleLogOut(e)}> Logout</button>
+        </h1>
       </header>
 
       {/* Chat window */}
