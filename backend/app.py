@@ -5,8 +5,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import  Session
 from datetime import datetime
 from backend.database import  engine, sessionLocal, Base
-from backend.models import User, Interaction
-from backend.schemas import interactionCreate, interactionResponse, userCreate, userResponse, LoginRequest
+from backend.models import User, Chat, Message
+from backend.schemas import ChatCreate, ChatResponse, MessageCreate, MessageResponse, UserResponse, UserCreate
 from backend.security import hash_password, verify_password
 from . import models
 from backend.auth import create_access_token, verify_token
@@ -28,9 +28,9 @@ if not openai.api_key:
 client = OpenAI(api_key=openai.api_key)
 
 res = client.models.list()
-print("//////////////////////////////////")
-print(res)
-print("//////////////////////////////////")
+# print("//////////////////////////////////")
+# # print(res)
+# print("//////////////////////////////////")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 auth_router = APIRouter()
@@ -50,7 +50,17 @@ def getDB():
         
         
 app = FastAPI()
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
 
+@app.exception_handler(422)
+async def validation_exception_handler(request: Request, exc):
+    print( "Validation error:", exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": await request.body()}
+    )
+    
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],  # or your React dev URL
@@ -71,8 +81,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 # endpoint to create a new user
-@app.post("/users/", response_model=userResponse)
-def createUser( user: userCreate, db: Session = Depends(getDB)):
+@app.post("/users/", response_model= UserResponse)
+def createUser( user: UserCreate, db: Session = Depends(getDB)):
     hashedPassword = hash_password(user.password)
     # validate if email already exists
     existingUserWithSameEmail = db.query(User).filter(User.email == user.email).first()
@@ -90,8 +100,8 @@ def createUser( user: userCreate, db: Session = Depends(getDB)):
     return dbUser
     
 # endpoint to get all users
-@app.get("/users/", response_model= List[userResponse])
-def getUsers(current_user: userResponse = Depends(get_current_user) ,db: Session = Depends(getDB)):
+@app.get("/users/", response_model= List[UserResponse])
+def getUsers(current_user = Depends(get_current_user) ,db: Session = Depends(getDB)):
     if not current_user.is_admin :
         raise HTTPException(status_code=403, detail="Not authorized")
     allUsers = db.query(User).all()
@@ -110,8 +120,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 # sigin endpoint
-@app.post("/sigin",response_model=userResponse, status_code=201)
-def sigin(new_user:userCreate, db: Session = Depends(getDB)):
+@app.post("/sigin",response_model=UserResponse, status_code=201)
+def sigin(new_user:UserCreate, db: Session = Depends(getDB)):
     # validate if email already exists
     existingUserWithSameEmail = db.query(User).filter(User.email == new_user.email).first()
     if existingUserWithSameEmail:
@@ -124,6 +134,7 @@ def sigin(new_user:userCreate, db: Session = Depends(getDB)):
         password = hashedPassword,
         is_admin = new_user.is_admin
     )
+    
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -135,12 +146,61 @@ def sigin(new_user:userCreate, db: Session = Depends(getDB)):
 def get_me(current_user: User = Depends(get_current_user)):
     return {"id": current_user.id, "name": current_user.name, "email": current_user.email, "is_admin": current_user.is_admin}
 
-@app.post("/interactions/", response_model=interactionResponse)
-def createInteraction(
-    interaction: interactionCreate,
+# endpoint to get al chats
+@app.get("/chats/", response_model=List[ChatResponse])
+def get_chats(db: Session = Depends(getDB), current_user = Depends(get_current_user)):
+    if current_user.is_admin:
+        all_chats = db.query(Chat).all()
+        return all_chats
+    else:
+        all_chats = db.query(Chat).filter(Chat.user_id == current_user.id).all()
+        return all_chats
+    
+    
+# endpoint to get a chat messages by id
+@app.get("/chats/{chat_id}/messages", response_model=List[MessageResponse])
+def get_chat_messages(chat_id: int, db: Session = Depends(getDB), current_user = Depends(get_current_user)):
+    chat = db.query(Chat).filter(Chat.id == chat_id).first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    if chat.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+    messages = db.query(Message).filter(Message.chat_id == chat_id).all()
+    return messages
+
+@app.post("/chats/", response_model=ChatResponse)
+def create_new_chat(db: Session = Depends(getDB), current_user: User = Depends(get_current_user)):
+    new_chat = Chat(user_id=current_user.id, created_at=datetime.now())
+    db.add(new_chat)
+    db.commit()
+    db.refresh(new_chat)
+    return new_chat
+
+
+@app.post("/messages/", response_model=List[MessageResponse])
+def send_message_to_chat(
+    chat_id: int,
+    user_message: str,
     db: Session = Depends(getDB),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
+    # Validate chat exists and belongs to current user
+    chat = db.query(Chat).filter(Chat.id == chat_id).first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    if chat.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to use this chat")
+
+    # Save user message
+    user_msg = Message(
+        chat_id=chat_id,
+        sender="user",
+        content=user_message,
+        timestamp=datetime.now()
+    )
+    db.add(user_msg)
+
+    # Get bot reply from OpenAI
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -158,38 +218,23 @@ def createInteraction(
                         "'I'm sorry, I can only help with common airport FAQs. Please contact airport staff or visit the official website for more info.'"
                     )
                 },
-                {
-                    "role": "user",
-                    "content": interaction.userMessage
-                }
+                {"role": "user", "content": user_message}
             ],
             temperature=0.6
         )
-
         bot_reply = response.choices[0].message.content.strip()
-
     except Exception as e:
         raise HTTPException(status_code=500, detail="OPEN AI ERROR: " + str(e))
 
-    db_interaction = Interaction(
-        userMessage=interaction.userMessage,
-        botMessage=bot_reply,
-        timestamp=datetime.now(),
-        userId=current_user.id
+    # Save bot message
+    bot_msg = Message(
+        chat_id=chat_id,
+        sender="bot",
+        content=bot_reply,
+        timestamp=datetime.now()
     )
-
-    db.add(db_interaction)
+    db.add(bot_msg)
     db.commit()
-    db.refresh(db_interaction)
 
-    return db_interaction
-# end poiint to get all interactions for a user, check if user is admin or not
-@app.get("/interactions/", response_model=List[interactionResponse])
-def getInteractions(db: Session = Depends(getDB), current_user = Depends(get_current_user)):
-    if current_user.is_admin:
-        allInteractions = db.query(Interaction).all()
-        return allInteractions
-    else:
-        allInteractions = db.query(Interaction).filter(Interaction.userId == current_user.id).all()
-        return allInteractions
-        
+    return [user_msg, bot_msg]
+

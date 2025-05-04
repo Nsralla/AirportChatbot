@@ -5,3 +5,4 @@ package.json
 backend\__pycache__
 backend/__pycache__/
 ./backend/__pycache__/
+backend/chats.db
