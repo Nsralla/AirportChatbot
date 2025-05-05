@@ -8,10 +8,7 @@ export default function HomePage() {
   const [chats, setChats] = useState([]);
   const navigate = useNavigate();
 
-  function handleLogOut() {
-    localStorage.removeItem("token");
-    navigate('/');
-  }
+
 
   // Fetch chats on load
   useEffect(() => {

@@ -80,24 +80,24 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
 
-# endpoint to create a new user
-@app.post("/users/", response_model= UserResponse)
-def createUser( user: UserCreate, db: Session = Depends(getDB)):
-    hashedPassword = hash_password(user.password)
-    # validate if email already exists
-    existingUserWithSameEmail = db.query(User).filter(User.email == user.email).first()
-    if existingUserWithSameEmail:
-        raise HTTPException(status_code=400, detail={"message": "Email already exists"})
-    dbUser = User(
-        name = user.name,
-        email = user.email,
-        password = hashedPassword,
-        is_admin = user.is_admin
-    )
-    db.add(dbUser)
-    db.commit()
-    db.refresh(dbUser)
-    return dbUser
+# # endpoint to create a new user
+# @app.post("/users/", response_model= UserResponse)
+# def createUser( user: UserCreate, db: Session = Depends(getDB)):
+#     hashedPassword = hash_password(user.password)
+#     # validate if email already exists
+#     existingUserWithSameEmail = db.query(User).filter(User.email == user.email).first()
+#     if existingUserWithSameEmail:
+#         raise HTTPException(status_code=400, detail={"message": "Email already exists"})
+#     dbUser = User(
+#         name = user.name,
+#         email = user.email,
+#         password = hashedPassword,
+#         is_admin = user.is_admin
+#     )
+#     db.add(dbUser)
+#     db.commit()
+#     db.refresh(dbUser)
+#     return dbUser
     
 # endpoint to get all users
 @app.get("/users/", response_model= List[UserResponse])
@@ -217,7 +217,9 @@ def send_message_to_chat(
                         "4. How much luggage can I carry?\n"
                         "5. Can I carry medicines in my hand luggage?\n\n"
                         "If the user asks anything outside of these questions, politely reply:\n"
-                        "'I'm sorry, I can only help with common airport FAQs. Please contact airport staff or visit the official website for more info.'"
+                        "'This assistant is designed to provide information on common airport-related inquiries only. "
+                            "For assistance with other topics, we kindly recommend contacting the appropriate authorities "
+                            "or visiting the official website for accurate and up-to-date information.'"
                     )
                 },
                 {"role": "user", "content": user_message}

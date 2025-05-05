@@ -30,7 +30,7 @@
 .newChatButton {
   padding: 0.5rem 1rem;
   font-size: 1rem;
-  margin-bottom: 1rem;
+ 
   cursor: pointer;
 }
 
@@ -50,4 +50,10 @@
 
 .chatItem:hover {
   background-color: #e0e0e0;
+}
+.header{
+  display: flex;
+  gap:12px;
+  align-items:center;
+  justify-content: center;
 }
