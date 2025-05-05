@@ -58,3 +58,21 @@ cd ./frontend/chatbot/
 npm install
 npm run start
 ```
+## Challenges
+
+### 1. Refactoring the Database Schema
+Initially, all user-bot interactions were stored in a single flat table. As the application matured, it became necessary to redesign the data model to better support chat sessions. This involved:
+- Splitting the `interactions` table into `chats` and `messages` tables.
+- Redesigning SQLAlchemy models and corresponding Pydantic schemas.
+- Updating the backend logic to properly associate messages with specific chat sessions.
+
+### 2. Managing Authentication and Token Expiry
+Implementing secure user authentication using JWT (JSON Web Tokens) introduced several challenges:
+- Ensuring tokens are issued correctly upon login or registration.
+- Handling token expiration and invalidation securely.
+- 
+### 3. React State Management and Routing
+Creating a seamless user experience with React required careful state and route management, including:
+- Tracking and updating the currently active chat session.
+- Dynamically routing users to `/chat/:chatId` upon chat creation or selection.
+
