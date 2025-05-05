@@ -40,3 +40,15 @@ This project aims to develop a user-friendly web-based chatbot that answers freq
 
 4. **Database Management (SQLite)**
    - Lightweight SQLite database stores interactions securely.
+  
+## Installation and Setup
+
+### Backend Setup
+```bash
+cd backend
+python -m venv env
+source env/bin/activate
+pip install -r requirements.txt
+cd ..
+uvicorn backend.app:app --reload
+
