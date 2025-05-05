@@ -1,0 +1,16 @@
+.notFound {
+    text-align: center;
+    padding: 3rem;
+  }
+  
+  .backLink {
+    display: inline-block;
+    margin-top: 1rem;
+    color: #0077cc;
+    text-decoration: none;
+  }
+  
+  .backLink:hover {
+    text-decoration: underline;
+  }
+  
