@@ -52,3 +52,9 @@ pip install -r requirements.txt
 cd ..
 uvicorn backend.app:app --reload
 
+### Frontend Setup
+```bash
+cd ./frontend/chatbot/
+npm install
+npm run start
+
